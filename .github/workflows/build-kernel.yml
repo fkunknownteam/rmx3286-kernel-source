@@ -22,6 +22,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ccache zip curl git python3 \
             gcc-9-aarch64-linux-gnu gcc-9-arm-linux-gnueabi
+          # Ubuntu names them with a -9 suffix; kernel expects unsuffixed names
+          sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-9 /usr/bin/aarch64-linux-gnu-gcc
+          sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-9 /usr/bin/arm-linux-gnueabi-gcc
           ccache -M 100G
 
       - name: Setup ccache cache
@@ -67,7 +70,7 @@ jobs:
           make O=out ARCH=arm64 spaced_defconfig
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
-            CC=aarch64-linux-gnu-gcc-9 \
+            CC=aarch64-linux-gnu-gcc \
             CROSS_COMPILE=aarch64-linux-gnu- \
             CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee error.log
