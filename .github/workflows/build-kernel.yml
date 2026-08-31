@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ccache zip curl git python3 gcc-aarch64-linux-gnu
+          sudo apt-get install -y ccache zip curl git python3 gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
           ccache -M 100G
 
       - name: Setup ccache cache
@@ -46,6 +46,7 @@ jobs:
             ARCH=arm64 \
             CC=aarch64-linux-gnu-gcc \
             CROSS_COMPILE=aarch64-linux-gnu- \
+            CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
             CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee error.log
 
       - name: Check build output
