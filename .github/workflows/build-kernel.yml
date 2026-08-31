@@ -1,0 +1,81 @@
+name: Build Kernel
+
+on:
+  workflow_dispatch:        # manual trigger
+  push:
+    branches: [main, thirteen, kernelsu, 13]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache zip curl git python3
+          ccache -M 100G
+
+      - name: Clone azure-clang toolchain
+        run: |
+          git clone --depth=1 https://gitlab.com/Panchajanya1999/azure-clang.git clang
+
+      - name: Setup ccache cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ github.ref_name }}-
+            ccache-
+
+      - name: Build kernel
+        run: |
+          export ARCH=arm64
+          export LC_ALL=C
+          export USE_CCACHE=1
+          export KBUILD_BUILD_HOST=GitHubActions
+          export KBUILD_BUILD_USER=INFIX
+          make O=out ARCH=arm64 spaced_defconfig
+          PATH="${PWD}/clang/bin:${PATH}" \
+          make -j$(nproc --all) O=out \
+            ARCH=arm64 \
+            CC=clang \
+            LD=ld.lld \
+            AR=llvm-ar \
+            NM=llvm-nm \
+            OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump \
+            CLANG_TRIPLE=aarch64-linux-gnu- \
+            CROSS_COMPILE="${PWD}/clang/bin/aarch64-linux-gnu-" \
+            CROSS_COMPILE_ARM32="${PWD}/clang/bin/arm-linux-gnueabi-" \
+            CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee error.log
+
+      - name: Check build output
+        run: |
+          ls -la out/arch/arm64/boot/
+          test -f out/arch/arm64/boot/Image.gz-dtb && echo "BUILD OK" || { echo "BUILD FAILED"; cat error.log; exit 1; }
+
+      - name: Package AnyKernel zip
+        run: |
+          git clone --depth=1 https://github.com/HELLINFIX/AnyKernel3.git AnyKernel
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel/
+          cd AnyKernel
+          zip -r9 ../Cosmos-kernel-spaced-$(date +%Y%m%d).zip *
+          cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel
+          path: |
+            Cosmos-kernel-*.zip
+            out/arch/arm64/boot/Image.gz-dtb
+            error.log
