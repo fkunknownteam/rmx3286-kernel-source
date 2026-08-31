@@ -1,13 +1,13 @@
 name: Build Kernel
 
 on:
-  workflow_dispatch:        # manual trigger
+  workflow_dispatch:
   push:
     branches: [main, thirteen, kernelsu, 13]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
 
@@ -20,22 +20,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ccache zip curl git python3
+          sudo apt-get install -y ccache zip curl git python3 gcc-aarch64-linux-gnu
           ccache -M 100G
-
-      - name: Clone azure-clang toolchain
-        run: |
-          # retry loop: gitlab clone of ~2GB toolchain is flaky
-          for i in 1 2 3 4 5; do
-            echo "Attempt $i..."
-            if git clone --depth=1 https://gitlab.com/Panchajanya1999/azure-clang.git clang; then
-              echo "CLANG CLONED OK"
-              break
-            fi
-            rm -rf clang
-            sleep 10
-          done
-          test -d clang/bin && echo "TOOLCHAIN READY" || { echo "CLANG CLONE FAILED"; exit 1; }
 
       - name: Setup ccache cache
         uses: actions/cache@v4
@@ -53,21 +39,13 @@ jobs:
           export USE_CCACHE=1
           export KBUILD_BUILD_HOST=GitHubActions
           export KBUILD_BUILD_USER=INFIX
-          # kernel 4.14 kconfig breaks with new host GCC warnings-as-errors
+          # kernel 4.14 kconfig fixes with new host GCC
           export HOSTCFLAGS="-Wno-error -Wno-maybe-uninitialized -Wno-implicit-fallthrough"
           make O=out ARCH=arm64 spaced_defconfig
-          PATH="${PWD}/clang/bin:${PATH}" \
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
-            CC=clang \
-            LD=ld.lld \
-            AR=llvm-ar \
-            NM=llvm-nm \
-            OBJCOPY=llvm-objcopy \
-            OBJDUMP=llvm-objdump \
-            CLANG_TRIPLE=aarch64-linux-gnu- \
-            CROSS_COMPILE="${PWD}/clang/bin/aarch64-linux-gnu-" \
-            CROSS_COMPILE_ARM32="${PWD}/clang/bin/arm-linux-gnueabi-" \
+            CC=aarch64-linux-gnu-gcc \
+            CROSS_COMPILE=aarch64-linux-gnu- \
             CONFIG_NO_ERROR_ON_MISMATCH=y 2>&1 | tee error.log
 
       - name: Check build output
