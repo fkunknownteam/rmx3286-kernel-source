@@ -41,13 +41,13 @@ jobs:
           export KBUILD_BUILD_USER=INFIX
           # kernel 4.14 kconfig fixes with new host GCC
           export HOSTCFLAGS="-Wno-error -Wno-maybe-uninitialized -Wno-implicit-fallthrough"
-          # kernel 4.14 source + modern GCC: disable warnings-as-errors that break the build
-          export KCFLAGS="-Wno-error -Wno-error=strict-prototypes -Wno-error=maybe-uninitialized \
-            -Wno-error=unused-but-set-variable -Wno-error=array-bounds -Wno-error=stringop-truncation \
-            -Wno-error=stringop-overflow= -Wno-error=format-truncation -Wno-error=sizeof-pointer-memaccess \
-            -Wno-error=restrict -Wno-error=zero-length-bounds -Wno-error=packed-not-aligned \
-            -Wno-error=shift-overflow -Wno-error=implicit-fallthrough -Wno-error=address-of-packed-member \
-            -Wno-error=unused-variable -Wno-error=unused-function -Wno-error=missing-prototypes"
+          # Old kernel + modern GCC: vendor Makefiles add -Werror AFTER KCFLAGS,
+          # so neutralize -Werror flags directly in the build files.
+          echo "Neutralizing -Werror in vendor makefiles..."
+          for f in $(grep -rl -- '-Werror' --include='Makefile' --include='*.mk' --include='Kbuild*' . 2>/dev/null); do
+            sed -i 's/-Werror=[^ ]*/ /g; s/-Werror/ /g' "$f"
+          done
+          echo "Done neutralizing."
           make O=out ARCH=arm64 spaced_defconfig
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
