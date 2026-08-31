@@ -43,6 +43,8 @@ jobs:
           export USE_CCACHE=1
           export KBUILD_BUILD_HOST=GitHubActions
           export KBUILD_BUILD_USER=INFIX
+          # kernel 4.14 kconfig breaks with new host GCC warnings-as-errors
+          export HOSTCFLAGS="-Wno-error -Wno-maybe-uninitialized -Wno-implicit-fallthrough"
           make O=out ARCH=arm64 spaced_defconfig
           PATH="${PWD}/clang/bin:${PATH}" \
           make -j$(nproc --all) O=out \
