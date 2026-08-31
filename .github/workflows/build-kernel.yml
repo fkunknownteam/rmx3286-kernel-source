@@ -61,7 +61,8 @@ jobs:
             -Wno-error=implicit-function-declaration -Wno-error=return-type \
             -Wno-error=incompatible-pointer-types -Wno-error=discarded-qualifiers \
             -Wno-error=sizeof-pointer-div -Wno-error=cast-function-type \
-            -Wno-error=stringop-overread"
+            -Wno-error=stringop-overread \
+            -Wno-error=misleading-indentation"
           make O=out ARCH=arm64 spaced_defconfig
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
