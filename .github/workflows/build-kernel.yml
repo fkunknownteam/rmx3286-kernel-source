@@ -25,7 +25,17 @@ jobs:
 
       - name: Clone azure-clang toolchain
         run: |
-          git clone --depth=1 https://gitlab.com/Panchajanya1999/azure-clang.git clang
+          # retry loop: gitlab clone of ~2GB toolchain is flaky
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i..."
+            if git clone --depth=1 https://gitlab.com/Panchajanya1999/azure-clang.git clang; then
+              echo "CLANG CLONED OK"
+              break
+            fi
+            rm -rf clang
+            sleep 10
+          done
+          test -d clang/bin && echo "TOOLCHAIN READY" || { echo "CLANG CLONE FAILED"; exit 1; }
 
       - name: Setup ccache cache
         uses: actions/cache@v4
