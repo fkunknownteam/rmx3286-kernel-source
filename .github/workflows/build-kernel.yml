@@ -25,10 +25,12 @@ jobs:
 
       - name: Patch header files for GCC 11 compatibility
         run: |
-          # Fix always_inline errors: GCC 11+ requires 'static inline' for always_inline
-          # functions whose body isn't visible at call site
-          sed -i 's/^inline void ksm_flock/static inline void ksm_flock/' include/linux/keyslot-manager.h
-          sed -i 's/^inline void blk_crypto_flock/static inline void blk_crypto_flock/' include/linux/blk-crypto.h
+          # always_inline errors: bodies of these functions live in .c files,
+          # so they must be normal extern declarations, NOT inline/static inline.
+          # (GCC 11+ hard-errors on always_inline with no visible body)
+          sed -i 's/^inline void ksm_flock/void ksm_flock/' include/linux/keyslot-manager.h
+          sed -i 's/^inline void blk_crypto_flock/void blk_crypto_flock/' include/linux/blk-crypto.h
+          grep -n "ksm_flock\|blk_crypto_flock" include/linux/keyslot-manager.h include/linux/blk-crypto.h
           echo "Headers patched"
 
       - name: Setup ccache cache
