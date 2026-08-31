@@ -20,12 +20,16 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ccache zip curl git python3 \
-            gcc-9-aarch64-linux-gnu gcc-9-arm-linux-gnueabi
-          # Ubuntu names them with a -9 suffix; kernel expects unsuffixed names
-          sudo ln -sf /usr/bin/aarch64-linux-gnu-gcc-9 /usr/bin/aarch64-linux-gnu-gcc
-          sudo ln -sf /usr/bin/arm-linux-gnueabi-gcc-9 /usr/bin/arm-linux-gnueabi-gcc
+          sudo apt-get install -y ccache zip curl git python3 gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
           ccache -M 100G
+
+      - name: Patch header files for GCC 11 compatibility
+        run: |
+          # Fix always_inline errors: GCC 11+ requires 'static inline' for always_inline
+          # functions whose body isn't visible at call site
+          sed -i 's/^inline void ksm_flock/static inline void ksm_flock/' include/linux/keyslot-manager.h
+          sed -i 's/^inline void blk_crypto_flock/static inline void blk_crypto_flock/' include/linux/blk-crypto.h
+          echo "Headers patched"
 
       - name: Setup ccache cache
         uses: actions/cache@v4
