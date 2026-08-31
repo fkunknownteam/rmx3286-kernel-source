@@ -41,13 +41,27 @@ jobs:
           export KBUILD_BUILD_USER=INFIX
           # kernel 4.14 kconfig fixes with new host GCC
           export HOSTCFLAGS="-Wno-error -Wno-maybe-uninitialized -Wno-implicit-fallthrough"
-          # Old kernel + modern GCC: vendor Makefiles add -Werror AFTER KCFLAGS,
-          # so neutralize -Werror flags directly in the build files.
-          echo "Neutralizing -Werror in vendor makefiles..."
-          for f in $(grep -rl -- '-Werror' --include='Makefile' --include='*.mk' --include='Kbuild*' . 2>/dev/null); do
-            sed -i 's/-Werror=[^ ]*/ /g; s/-Werror/ /g' "$f"
-          done
-          echo "Done neutralizing."
+          # Old kernel (4.14) + modern GCC: vendor Makefiles enable specific
+          # -Werror=<warn> flags. Bare -Wno-error does NOT cancel -Werror=<warn>,
+          # so disable each known problematic warning individually via KCFLAGS.
+          export KCFLAGS=" \
+            -Wno-error=strict-prototypes -Wno-error=maybe-uninitialized \
+            -Wno-error=unused-but-set-variable -Wno-error=array-bounds \
+            -Wno-error=stringop-truncation -Wno-error=stringop-overflow \
+            -Wno-error=format-truncation -Wno-error=sizeof-pointer-memaccess \
+            -Wno-error=restrict -Wno-error=zero-length-bounds \
+            -Wno-error=packed-not-aligned -Wno-error=shift-overflow \
+            -Wno-error=implicit-fallthrough -Wno-error=address-of-packed-member \
+            -Wno-error=unused-variable -Wno-error=unused-function \
+            -Wno-error=missing-prototypes -Wno-error=parentheses \
+            -Wno-error=unused-result -Wno-error=format-overflow \
+            -Wno-error=deprecated-declarations -Wno-error=pointer-arith \
+            -Wno-error=unused-parameter -Wno-error=int-in-bool-context \
+            -Wno-error=enum-conversion -Wno-error=implicit-int \
+            -Wno-error=implicit-function-declaration -Wno-error=return-type \
+            -Wno-error=incompatible-pointer-types -Wno-error=discarded-qualifiers \
+            -Wno-error=sizeof-pointer-div -Wno-error=cast-function-type \
+            -Wno-error=stringop-overread"
           make O=out ARCH=arm64 spaced_defconfig
           make -j$(nproc --all) O=out \
             ARCH=arm64 \
