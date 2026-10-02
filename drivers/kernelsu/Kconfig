@@ -1,0 +1,6 @@
+config KSU
+	bool "KernelSU support"
+	default n
+	help
+	  Stub: original KernelSU sources missing from this snapshot.
+	  Root is provided by APatch/KernelPatch on this device.
